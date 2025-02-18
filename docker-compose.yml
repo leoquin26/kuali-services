@@ -1,0 +1,77 @@
+version: '3.8'
+services:
+  backend:
+    build: ./servicio1/backend
+    ports:
+      - "3001:3000"
+    volumes:
+      # Monta el código fuente, pero NO sobrescriba node_modules
+      - ./servicio1/backend:/app:cached
+      # Monta un volumen anónimo para node_modules
+      - /app/node_modules
+      # Monta los uploads
+      - ./servicio1/backend/uploads:/app/uploads
+    depends_on:
+      - mongo
+    environment:
+      - MONGO_URI=mongodb://mongo:27017/servicio1
+
+  frontend:
+    build: ./servicio1/frontend
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./servicio1/frontend:/app
+
+  analisis:
+    build: ./servicio2
+    ports:
+      - "5001:5000"
+    volumes:
+      - ./servicio1/backend/uploads:/servicio1/backend/uploads
+    depends_on:
+      - mongo
+    environment:
+      - OPENAI_API_KEY=
+      - MONGO_URI=mongodb://mongo:27017/servicio1
+
+  results-backend:
+    build: ./servicio3/backend
+    ports:
+      - "4000:4000"
+    volumes:
+      # Monta el código fuente pero excluye node_modules (usa .dockerignore para evitar que se copie)
+      - type: bind
+        source: ./servicio3/backend
+        target: /app
+        consistency: cached
+      # Monta un volumen anónimo para node_modules para preservar lo instalado durante el build
+      - /app/node_modules
+    depends_on:
+      - mongo
+    environment:
+      - MONGO_URI=mongodb://mongo:27017/servicio1
+      - NODE_ENV=development
+
+  results-frontend:
+    build: ./servicio3/frontend
+    ports:
+      - "3003:3000"
+    volumes:
+      - type: bind
+        source: ./servicio3/frontend
+        target: /app
+        consistency: cached
+      - /app/node_modules
+    environment:
+      - NODE_ENV=development
+
+  mongo:
+    image: mongo:latest
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo-data:/data/db
+
+volumes:
+  mongo-data:

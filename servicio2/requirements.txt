@@ -1,0 +1,6 @@
+Flask
+openai==0.28.0
+pymongo
+PyPDF2
+flask-cors
+pdfminer.six
